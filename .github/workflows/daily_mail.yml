@@ -4,16 +4,16 @@ import time
 import sib_api_v3_sdk
 from sib_api_v3_sdk.rest import ApiException
 
-# 1. 配置 Brevo (从 GitHub Secret 读取)
+# 1. 配置 Brevo (自动从 GitHub Secret 获取 API Key)
 configuration = sib_api_v3_sdk.Configuration()
 configuration.api_key['api-key'] = os.getenv('BREVO_API_KEY')
 api_instance = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
 
-# 2. 读取用户数据
+# 2. 读取用户数据库文件
 with open('996yyds.json', 'r', encoding='utf-8') as f:
     users_data = json.load(f).get('data', [])
 
-# 3. 读取发送进度
+# 3. 读取发送进度 (确保每天发 100 封不重复)
 PROGRESS_FILE = 'progress.txt'
 start_index = 0
 if os.path.exists(PROGRESS_FILE):
@@ -24,7 +24,7 @@ if os.path.exists(PROGRESS_FILE):
         except:
             start_index = 0
 
-# 4. 准备本次发送
+# 4. 筛选本次要发送的 100 个用户
 batch_size = 100
 end_index = start_index + batch_size
 current_batch = users_data[start_index:end_index]
@@ -33,7 +33,7 @@ if not current_batch:
     print("所有用户已发送完毕！")
     exit()
 
-# --- 这里就是你刚才确认的定制内容 ---
+# --- 这里是你定制的花海 AnyTLS 推广内容 ---
 SENDER_NAME = "花海运营中心"
 SENDER_EMAIL = "hc@alhpool.com"  
 SUBJECT = "【花海】全新 AnyTLS 跨境协议上线，诚邀开启全球研学体验"
@@ -76,12 +76,12 @@ HTML_CONTENT = """
 </body>
 </html>
 """
-# -------------------------
 
 # 5. 执行发送循环
 success_count = 0
 for user in current_batch:
     email = user.get('email', '').strip()
+    # 过滤掉无效和管理邮箱
     if "@" not in email or "admin" in email or "null" in email.lower():
         continue
     
@@ -96,12 +96,14 @@ for user in current_batch:
         api_instance.send_transac_email(send_smtp_email)
         print(f"✅ 发送成功: {email}")
         success_count += 1
-        time.sleep(2) # 延时2秒，对国内邮箱更友好
+        time.sleep(2) # 延时2秒，降低被 QQ 邮箱风控的概率
     except ApiException as e:
         print(f"❌ 发送失败 {email}: {e}")
 
-# 6. 保存进度
+# 6. 将新进度写入 progress.txt 并保存回 GitHub
 with open(PROGRESS_FILE, 'w') as f:
     f.write(str(end_index))
 
-print(f"本次成功发送 {success_count} 封，下次从第 {end_index} 位开始。")
+print(f"--- 本次任务小结 ---")
+print(f"成功发送: {success_count} 封")
+print(f"下一次将从数据表的第 {end_index} 行开始发送。")
