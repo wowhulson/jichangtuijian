@@ -1,6 +1,41 @@
-# --- 针对 huahai.wang 的定制推广内容 ---
+import json
+import os
+import time
+import sib_api_v3_sdk
+from sib_api_v3_sdk.rest import ApiException
+
+# 1. 配置 Brevo (自动从 GitHub Secret 获取 API Key)
+configuration = sib_api_v3_sdk.Configuration()
+configuration.api_key['api-key'] = os.getenv('BREVO_API_KEY')
+api_instance = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
+
+# 2. 读取用户数据库文件
+with open('996yyds.json', 'r', encoding='utf-8') as f:
+    users_data = json.load(f).get('data', [])
+
+# 3. 读取发送进度 (确保每天发 100 封不重复)
+PROGRESS_FILE = 'progress.txt'
+start_index = 0
+if os.path.exists(PROGRESS_FILE):
+    with open(PROGRESS_FILE, 'r') as f:
+        try:
+            content = f.read().strip()
+            start_index = int(content) if content else 0
+        except:
+            start_index = 0
+
+# 4. 筛选本次要发送的 100 个用户
+batch_size = 100
+end_index = start_index + batch_size
+current_batch = users_data[start_index:end_index]
+
+if not current_batch:
+    print("所有用户已发送完毕！")
+    exit()
+
+# --- 花海定制内容 (hc@alhpool.com / huahai.wang) ---
 SENDER_NAME = "花海运营中心"
-SENDER_EMAIL = "hc@alhpool.com"  # 请确保此邮箱已在 Brevo 的 Senders 验证
+SENDER_EMAIL = "hc@alhpool.com"  
 SUBJECT = "【花海】全新 AnyTLS 跨境协议上线，诚邀开启全球研学体验"
 
 HTML_CONTENT = """
@@ -41,3 +76,31 @@ HTML_CONTENT = """
 </body>
 </html>
 """
+
+# 5. 执行发送循环
+success_count = 0
+for user in current_batch:
+    email = user.get('email', '').strip()
+    if "@" not in email or "admin" in email or "null" in email.lower():
+        continue
+    
+    send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+        to=[{"email": email}],
+        sender={"name": SENDER_NAME, "email": SENDER_EMAIL},
+        subject=SUBJECT,
+        html_content=HTML_CONTENT
+    )
+
+    try:
+        api_instance.send_transac_email(send_smtp_email)
+        print(f"✅ 发送成功: {email}")
+        success_count += 1
+        time.sleep(2) # 延时2秒
+    except ApiException as e:
+        print(f"❌ 发送失败 {email}: {e}")
+
+# 6. 更新进度
+with open(PROGRESS_FILE, 'w') as f:
+    f.write(str(end_index))
+
+print(f"--- 任务完成: 成功 {success_count} 封，下个起点 {end_index} ---")
