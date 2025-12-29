@@ -76,26 +76,6 @@ HTML_CONTENT = """
 </body>
 </html>
 """
-# === 临时测试模式：只发给我自己（发完就退出，不动进度）===
-TEST_EMAILS = ["wow_tv@icloud.com", "249604682@qq.com"]
-
-for test_addr in TEST_EMAILS:
-    test_email = sib_api_v3_sdk.SendSmtpEmail(
-        to=[{"email": test_addr}],
-        sender={"name": SENDER_NAME, "email": SENDER_EMAIL},
-        subject="【测试预览】花海邮件样式确认",
-        html_content=HTML_CONTENT
-    )
-    try:
-        api_instance.send_transac_email(test_email)
-        print(f"🧪 测试邮件已发送到: {test_addr}")
-    except ApiException as e:
-        print(f"🧪 测试邮件发送失败 {test_addr}: {e}")
-
-print("🧪 测试完成：已仅发送给自己的邮箱，脚本退出（不会群发，也不会更新 progress）。")
-exit()
-# === 测试模式结束 ===
-
 # 5. 执行发送循环
 success_count = 0
 for user in current_batch:
